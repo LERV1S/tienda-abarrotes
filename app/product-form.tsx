@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -9,14 +9,37 @@ import {
     TextInput
 } from 'react-native';
 
+type Product = {
+  id: number;
+  name: string;
+  purchasePrice: number;
+  salePrice: number;
+  stock: number;
+  barcode?: string;
+};
+
+const MOCK_PRODUCTS: Product[] = [
+  { id: 1, name: 'Leche Alpura 1L', purchasePrice: 18, salePrice: 22, stock: 15 },
+  { id: 2, name: 'Pan Bimbo', purchasePrice: 15, salePrice: 18.5, stock: 10 },
+  { id: 3, name: 'Refresco Coca 2L', purchasePrice: 25, salePrice: 30, stock: 20 },
+];
+
 export default function ProductFormScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
 
-  const [name, setName] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState('');
-  const [salePrice, setSalePrice] = useState('');
-  const [stock, setStock] = useState('');
-  const [barcode, setBarcode] = useState('');
+  const isEdit = !!id;
+  const existingProduct = MOCK_PRODUCTS.find((p) => p.id === Number(id));
+
+  const [name, setName] = useState(existingProduct?.name ?? '');
+  const [purchasePrice, setPurchasePrice] = useState(
+    existingProduct?.purchasePrice.toString() ?? ''
+  );
+  const [salePrice, setSalePrice] = useState(
+    existingProduct?.salePrice.toString() ?? ''
+  );
+  const [stock, setStock] = useState(existingProduct?.stock.toString() ?? '');
+  const [barcode, setBarcode] = useState(existingProduct?.barcode ?? '');
 
   const handleSave = () => {
     if (!name || !purchasePrice || !salePrice) {
@@ -24,22 +47,42 @@ export default function ProductFormScreen() {
       return;
     }
 
-    // Aquí se integrará con SQLite más adelante
-    console.log('Producto guardado:', {
+    const data = {
+      id: isEdit ? Number(id) : Date.now(),
       name,
       purchasePrice: parseFloat(purchasePrice),
       salePrice: parseFloat(salePrice),
       stock: stock ? parseInt(stock) : 0,
       barcode,
-    });
+    };
 
-    Alert.alert('Éxito', 'Producto guardado correctamente');
-    router.back(); // Regresar a pantalla anterior
+    console.log(isEdit ? 'Producto actualizado:' : 'Producto nuevo:', data);
+    Alert.alert('Éxito', `Producto ${isEdit ? 'actualizado' : 'guardado'}`);
+    router.back();
+  };
+
+  const handleDelete = () => {
+    Alert.alert('Eliminar', '¿Estás seguro que deseas eliminar este producto?', [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          console.log('Producto eliminado:', existingProduct?.id);
+          router.back();
+        },
+      },
+    ]);
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>➕ Nuevo Producto</Text>
+      <Text style={styles.title}>
+        {isEdit ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
+      </Text>
 
       <TextInput
         placeholder="Nombre del producto"
@@ -80,8 +123,16 @@ export default function ProductFormScreen() {
       />
 
       <Pressable style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Guardar producto</Text>
+        <Text style={styles.saveButtonText}>
+          {isEdit ? 'Guardar Cambios' : 'Guardar Producto'}
+        </Text>
       </Pressable>
+
+      {isEdit && (
+        <Pressable style={styles.deleteButton} onPress={handleDelete}>
+          <Text style={styles.deleteButtonText}>🗑️ Eliminar Producto</Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -109,4 +160,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   saveButtonText: { color: '#fff', fontSize: 16 },
+  deleteButton: {
+    backgroundColor: '#cc0000',
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  deleteButtonText: { color: '#fff', fontSize: 16 },
 });

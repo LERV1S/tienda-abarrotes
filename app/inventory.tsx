@@ -51,13 +51,15 @@ export default function InventoryScreen() {
         data={filteredProducts}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <View style={styles.productCard}>
-            <Text style={styles.productName}>{item.name}</Text>
-            <Text style={styles.productDetail}>${item.price.toFixed(2)}</Text>
-            <Text style={styles.productStock}>
-              Stock: {item.stock ?? 'N/D'}
-            </Text>
-          </View>
+            <Pressable onPress={() => router.push(`/product-form?id=${item.id}`)}>
+                <View style={styles.productCard}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                    <Text style={styles.productDetail}>${item.price.toFixed(2)}</Text>
+                    <Text style={styles.productStock}>
+                    Stock: {item.stock ?? 'N/D'}
+                    </Text>
+                </View>
+            </Pressable>
         )}
       />
 
