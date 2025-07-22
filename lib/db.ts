@@ -1,99 +1,68 @@
-import * as SQLite from 'expo-sqlite';
+import { openDatabaseSync } from 'expo-sqlite';
 
-const db = SQLite.openDatabase('abarrotes.db');
+const db = openDatabaseSync('abarrotes.db');
 
 export const initDB = () => {
-  db.transaction((tx) => {
-    tx.executeSql(
-      `CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        purchasePrice REAL,
-        salePrice REAL,
-        stock INTEGER,
-        barcode TEXT
-      );`
+  db.execAsync(`
+    CREATE TABLE IF NOT EXISTS products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      purchasePrice REAL,
+      salePrice REAL,
+      stock INTEGER,
+      barcode TEXT
     );
-  });
+  `);
 };
 
-export const getProducts = (): Promise<any[]> =>
-  new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        'SELECT * FROM products;',
-        [],
-        (_, result) => resolve(result.rows._array),
-        (_, error) => reject(error)
-      );
-    });
-  });
+export const getProducts = async (): Promise<any[]> => {
+  const result = await db.getAllAsync('SELECT * FROM products');
+  return result;
+};
 
-export const getProductById = (id: number): Promise<any> =>
-  new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        'SELECT * FROM products WHERE id = ?;',
-        [id],
-        (_, result) => resolve(result.rows.item(0)),
-        (_, error) => reject(error)
-      );
-    });
-  });
+export const getProductById = async (id: number): Promise<any> => {
+  const result = await db.getFirstAsync('SELECT * FROM products WHERE id = ?', [id]);
+  return result;
+};
 
-export const insertProduct = (product: {
+export const insertProduct = async (product: {
   name: string;
   purchasePrice: number;
   salePrice: number;
   stock: number;
   barcode?: string;
-}): Promise<void> =>
-  new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        'INSERT INTO products (name, purchasePrice, salePrice, stock, barcode) VALUES (?, ?, ?, ?, ?);',
-        [
-          product.name,
-          product.purchasePrice,
-          product.salePrice,
-          product.stock,
-          product.barcode,
-        ],
-        () => resolve(),
-        (_, error) => reject(error)
-      );
-    });
-  });
+}): Promise<void> => {
+  await db.runAsync(
+    'INSERT INTO products (name, purchasePrice, salePrice, stock, barcode) VALUES (?, ?, ?, ?, ?)',
+    [
+      product.name,
+      product.purchasePrice,
+      product.salePrice,
+      product.stock,
+      product.barcode ?? null,
+    ]
+  );
+};
 
-export const updateProduct = (id: number, product: Partial<any>): Promise<void> =>
-  new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        `UPDATE products SET name = ?, purchasePrice = ?, salePrice = ?, stock = ?, barcode = ? WHERE id = ?;`,
-        [
-          product.name,
-          product.purchasePrice,
-          product.salePrice,
-          product.stock,
-          product.barcode,
-          id,
-        ],
-        () => resolve(),
-        (_, error) => reject(error)
-      );
-    });
-  });
+export const updateProduct = async (
+  id: number,
+  product: Partial<any>
+): Promise<void> => {
+  await db.runAsync(
+    `UPDATE products SET name = ?, purchasePrice = ?, salePrice = ?, stock = ?, barcode = ? WHERE id = ?`,
+    [
+      product.name,
+      product.purchasePrice,
+      product.salePrice,
+      product.stock,
+      product.barcode ?? null,
+      id,
+    ]
+  );
+};
 
-export const deleteProduct = (id: number): Promise<void> =>
-  new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        'DELETE FROM products WHERE id = ?;',
-        [id],
-        () => resolve(),
-        (_, error) => reject(error)
-      );
-    });
-  });
+export const deleteProduct = async (id: number): Promise<void> => {
+  await db.runAsync('DELETE FROM products WHERE id = ?', [id]);
+};
 
 export default db;
