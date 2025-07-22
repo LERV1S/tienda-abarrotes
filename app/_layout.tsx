@@ -4,6 +4,9 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { useEffect } from 'react';
+import { initDB } from '../lib/db';
+
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function RootLayout() {
@@ -12,8 +15,11 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
+  useEffect(() => {
+    initDB(); // ✅ Inicializa SQLite al arrancar la app
+  }, []);
+
   if (!loaded) {
-    // Async font loading only occurs in development.
     return null;
   }
 
