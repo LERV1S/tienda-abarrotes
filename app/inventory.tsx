@@ -79,6 +79,12 @@ export default function InventoryScreen() {
       >
         <Text style={styles.addButtonText}>➕ Agregar Producto</Text>
       </Pressable>
+      <Pressable
+        style={[styles.addButton, { backgroundColor: '#555' }]}
+        onPress={() => router.push('/scan')}
+      >
+        <Text style={styles.addButtonText}>📷 Escanear Código</Text>
+      </Pressable>
     </View>
   );
 }
