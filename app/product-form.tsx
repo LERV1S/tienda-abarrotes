@@ -1,78 +1,93 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput
 } from 'react-native';
-
-type Product = {
-  id: number;
-  name: string;
-  purchasePrice: number;
-  salePrice: number;
-  stock: number;
-  barcode?: string;
-};
-
-const MOCK_PRODUCTS: Product[] = [
-  { id: 1, name: 'Leche Alpura 1L', purchasePrice: 18, salePrice: 22, stock: 15 },
-  { id: 2, name: 'Pan Bimbo', purchasePrice: 15, salePrice: 18.5, stock: 10 },
-  { id: 3, name: 'Refresco Coca 2L', purchasePrice: 25, salePrice: 30, stock: 20 },
-];
+import {
+  deleteProduct,
+  getProductById,
+  insertProduct,
+  updateProduct,
+} from '../lib/db';
 
 export default function ProductFormScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
 
   const isEdit = !!id;
-  const existingProduct = MOCK_PRODUCTS.find((p) => p.id === Number(id));
 
-  const [name, setName] = useState(existingProduct?.name ?? '');
-  const [purchasePrice, setPurchasePrice] = useState(
-    existingProduct?.purchasePrice.toString() ?? ''
-  );
-  const [salePrice, setSalePrice] = useState(
-    existingProduct?.salePrice.toString() ?? ''
-  );
-  const [stock, setStock] = useState(existingProduct?.stock.toString() ?? '');
-  const [barcode, setBarcode] = useState(existingProduct?.barcode ?? '');
+  const [name, setName] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [salePrice, setSalePrice] = useState('');
+  const [stock, setStock] = useState('');
+  const [barcode, setBarcode] = useState('');
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (isEdit) {
+      const loadProduct = async () => {
+        try {
+          const product = await getProductById(Number(id));
+          setName(product.name);
+          setPurchasePrice(product.purchasePrice?.toString() ?? '');
+          setSalePrice(product.salePrice?.toString() ?? '');
+          setStock(product.stock?.toString() ?? '');
+          setBarcode(product.barcode ?? '');
+        } catch (error) {
+          Alert.alert('Error', 'No se pudo cargar el producto.');
+        }
+      };
+      loadProduct();
+    }
+  }, [id]);
+
+  const handleSave = async () => {
     if (!name || !purchasePrice || !salePrice) {
-      Alert.alert('Campos requeridos', 'Completa los campos obligatorios.');
+      Alert.alert('Campos requeridos', 'Completa nombre, precio de compra y venta.');
       return;
     }
 
-    const data = {
-      id: isEdit ? Number(id) : Date.now(),
+    const productData = {
       name,
       purchasePrice: parseFloat(purchasePrice),
       salePrice: parseFloat(salePrice),
       stock: stock ? parseInt(stock) : 0,
-      barcode,
+      barcode: barcode || null,
     };
 
-    console.log(isEdit ? 'Producto actualizado:' : 'Producto nuevo:', data);
-    Alert.alert('Éxito', `Producto ${isEdit ? 'actualizado' : 'guardado'}`);
-    router.back();
+    try {
+      if (isEdit) {
+        await updateProduct(Number(id), productData);
+        Alert.alert('Producto actualizado');
+      } else {
+        await insertProduct(productData);
+        Alert.alert('Producto guardado');
+      }
+      router.back();
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo guardar el producto.');
+      console.error(error);
+    }
   };
 
-  const handleDelete = () => {
-    Alert.alert('Eliminar', '¿Estás seguro que deseas eliminar este producto?', [
-      {
-        text: 'Cancelar',
-        style: 'cancel',
-      },
+  const handleDelete = async () => {
+    Alert.alert('Eliminar', '¿Deseas eliminar este producto?', [
+      { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
         style: 'destructive',
-        onPress: () => {
-          console.log('Producto eliminado:', existingProduct?.id);
-          router.back();
+        onPress: async () => {
+          try {
+            await deleteProduct(Number(id));
+            Alert.alert('Producto eliminado');
+            router.back();
+          } catch (error) {
+            Alert.alert('Error', 'No se pudo eliminar el producto.');
+          }
         },
       },
     ]);

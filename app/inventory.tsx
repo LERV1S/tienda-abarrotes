@@ -1,36 +1,41 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
+import { getProducts } from '../lib/db';
 
 type Product = {
   id: number;
   name: string;
-  price: number;
+  salePrice: number;
   stock?: number;
 };
-
-const MOCK_PRODUCTS: Product[] = [
-  { id: 1, name: 'Leche Alpura 1L', price: 22.0, stock: 15 },
-  { id: 2, name: 'Pan Bimbo', price: 18.5, stock: 10 },
-  { id: 3, name: 'Refresco Coca 2L', price: 30.0, stock: 20 },
-];
 
 export default function InventoryScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchText, setSearchText] = useState('');
   const router = useRouter();
 
-  useEffect(() => {
-    // Simulamos carga de datos (en el futuro se cargará desde SQLite)
-    setProducts(MOCK_PRODUCTS);
-  }, []);
+  // Recargar productos cada vez que la pantalla se enfoque
+  useFocusEffect(
+    useCallback(() => {
+      const loadProducts = async () => {
+        try {
+          const data = await getProducts();
+          setProducts(data);
+        } catch (error) {
+          console.error('Error al cargar productos:', error);
+        }
+      };
+      loadProducts();
+    }, [])
+  );
 
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchText.toLowerCase())
@@ -51,16 +56,21 @@ export default function InventoryScreen() {
         data={filteredProducts}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-            <Pressable onPress={() => router.push(`/product-form?id=${item.id}`)}>
-                <View style={styles.productCard}>
-                    <Text style={styles.productName}>{item.name}</Text>
-                    <Text style={styles.productDetail}>${item.price.toFixed(2)}</Text>
-                    <Text style={styles.productStock}>
-                    Stock: {item.stock ?? 'N/D'}
-                    </Text>
-                </View>
-            </Pressable>
+          <Pressable onPress={() => router.push(`/product-form?id=${item.id}`)}>
+            <View style={styles.productCard}>
+              <Text style={styles.productName}>{item.name}</Text>
+              <Text style={styles.productDetail}>${item.salePrice.toFixed(2)}</Text>
+              <Text style={styles.productStock}>
+                Stock: {item.stock ?? 'N/D'}
+              </Text>
+            </View>
+          </Pressable>
         )}
+        ListEmptyComponent={
+          <Text style={{ textAlign: 'center', marginTop: 30, color: '#999' }}>
+            No hay productos
+          </Text>
+        }
       />
 
       <Pressable

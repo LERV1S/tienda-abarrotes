@@ -15,6 +15,15 @@ export const initDB = () => {
   `);
 };
 
+// Tipado compartido para producto
+export type ProductInput = {
+  name: string;
+  purchasePrice: number;
+  salePrice: number;
+  stock: number;
+  barcode?: string | null;
+};
+
 export const getProducts = async (): Promise<any[]> => {
   const result = await db.getAllAsync('SELECT * FROM products');
   return result;
@@ -25,13 +34,7 @@ export const getProductById = async (id: number): Promise<any> => {
   return result;
 };
 
-export const insertProduct = async (product: {
-  name: string;
-  purchasePrice: number;
-  salePrice: number;
-  stock: number;
-  barcode?: string;
-}): Promise<void> => {
+export const insertProduct = async (product: ProductInput): Promise<void> => {
   await db.runAsync(
     'INSERT INTO products (name, purchasePrice, salePrice, stock, barcode) VALUES (?, ?, ?, ?, ?)',
     [
@@ -39,22 +42,22 @@ export const insertProduct = async (product: {
       product.purchasePrice,
       product.salePrice,
       product.stock,
-      product.barcode ?? null,
+      product.barcode ?? null, // null explícito permitido
     ]
   );
 };
 
 export const updateProduct = async (
   id: number,
-  product: Partial<any>
+  product: Partial<ProductInput>
 ): Promise<void> => {
   await db.runAsync(
     `UPDATE products SET name = ?, purchasePrice = ?, salePrice = ?, stock = ?, barcode = ? WHERE id = ?`,
     [
-      product.name,
-      product.purchasePrice,
-      product.salePrice,
-      product.stock,
+      product.name ?? null,
+      product.purchasePrice ?? null,
+      product.salePrice ?? null,
+      product.stock ?? null,
       product.barcode ?? null,
       id,
     ]
