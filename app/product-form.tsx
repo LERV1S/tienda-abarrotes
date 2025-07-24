@@ -1,12 +1,16 @@
+import { CameraView } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Button,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput
+  TextInput,
+  View,
 } from 'react-native';
 import {
   deleteProduct,
@@ -26,6 +30,7 @@ export default function ProductFormScreen() {
   const [salePrice, setSalePrice] = useState('');
   const [stock, setStock] = useState('');
   const [barcodeValue, setBarcode] = useState('');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   useEffect(() => {
     if (isEdit) {
@@ -95,6 +100,12 @@ export default function ProductFormScreen() {
     ]);
   };
 
+  const handleBarcodeScannedInForm = ({ data }: { data: string }) => {
+    setIsCameraOpen(false);
+    setBarcode(data);
+    Alert.alert('Código escaneado', `Se asignó el código: ${data}`);
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>
@@ -139,6 +150,10 @@ export default function ProductFormScreen() {
         onChangeText={setBarcode}
       />
 
+      <Pressable style={styles.scanButton} onPress={() => setIsCameraOpen(true)}>
+        <Text style={styles.scanButtonText}>📷 Escanear código</Text>
+      </Pressable>
+
       <Pressable style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonText}>
           {isEdit ? 'Guardar Cambios' : 'Guardar Producto'}
@@ -150,6 +165,19 @@ export default function ProductFormScreen() {
           <Text style={styles.deleteButtonText}>🗑️ Eliminar Producto</Text>
         </Pressable>
       )}
+
+      <Modal visible={isCameraOpen} animationType="slide">
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          onBarcodeScanned={handleBarcodeScannedInForm}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a'],
+          }}
+        />
+        <View style={styles.cameraOverlay}>
+          <Button title="Cerrar" onPress={() => setIsCameraOpen(false)} />
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -169,6 +197,17 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
   },
+  scanButton: {
+    backgroundColor: '#0077cc',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  scanButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
   saveButton: {
     backgroundColor: '#008080',
     padding: 14,
@@ -185,4 +224,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   deleteButtonText: { color: '#fff', fontSize: 16 },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
 });
