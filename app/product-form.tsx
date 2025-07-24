@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import {
   deleteProduct,
+  getProductByBarcode,
   getProductById,
   insertProduct,
   updateProduct,
@@ -56,6 +57,19 @@ export default function ProductFormScreen() {
     if (!name || !purchasePrice || !salePrice) {
       Alert.alert('Campos requeridos', 'Completa nombre, precio de compra y venta.');
       return;
+    }
+
+    if (barcodeValue) {
+      const existingProduct = await getProductByBarcode(barcodeValue);
+      const sameProductId = existingProduct?.id === Number(id);
+
+      if (existingProduct && (!isEdit || !sameProductId)) {
+        Alert.alert(
+          'Código duplicado',
+          `Ya existe un producto con este código de barras: ${existingProduct.name}`
+        );
+        return;
+      }
     }
 
     const productData = {
