@@ -6,7 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
+  TextInput
 } from 'react-native';
 import {
   deleteProduct,
@@ -17,7 +17,7 @@ import {
 
 export default function ProductFormScreen() {
   const router = useRouter();
-  const { id, barcode: incomingBarcode } = useLocalSearchParams();
+  const { id, barcode } = useLocalSearchParams();
 
   const isEdit = !!id;
 
@@ -25,14 +25,14 @@ export default function ProductFormScreen() {
   const [purchasePrice, setPurchasePrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [stock, setStock] = useState('');
-  const [barcode, setBarcode] = useState('');
+  const [barcodeValue, setBarcode] = useState('');
 
   useEffect(() => {
-    if (isEdit && id) {
+    if (isEdit) {
       const loadProduct = async () => {
         try {
           const product = await getProductById(Number(id));
-          setName(product.name ?? '');
+          setName(product.name);
           setPurchasePrice(product.purchasePrice?.toString() ?? '');
           setSalePrice(product.salePrice?.toString() ?? '');
           setStock(product.stock?.toString() ?? '');
@@ -42,11 +42,10 @@ export default function ProductFormScreen() {
         }
       };
       loadProduct();
-    } else if (incomingBarcode) {
-      // Si es un producto nuevo y viene desde escaneo
-      setBarcode(String(incomingBarcode));
+    } else if (barcode) {
+      setBarcode(barcode.toString());
     }
-  }, [id, incomingBarcode]);
+  }, [id, barcode]);
 
   const handleSave = async () => {
     if (!name || !purchasePrice || !salePrice) {
@@ -59,11 +58,11 @@ export default function ProductFormScreen() {
       purchasePrice: parseFloat(purchasePrice),
       salePrice: parseFloat(salePrice),
       stock: stock ? parseInt(stock) : 0,
-      barcode: barcode?.trim() || null,
+      barcode: barcodeValue || null,
     };
 
     try {
-      if (isEdit && id) {
+      if (isEdit) {
         await updateProduct(Number(id), productData);
         Alert.alert('Producto actualizado');
       } else {
@@ -85,11 +84,9 @@ export default function ProductFormScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            if (id) {
-              await deleteProduct(Number(id));
-              Alert.alert('Producto eliminado');
-              router.back();
-            }
+            await deleteProduct(Number(id));
+            Alert.alert('Producto eliminado');
+            router.back();
           } catch (error) {
             Alert.alert('Error', 'No se pudo eliminar el producto.');
           }
@@ -138,7 +135,7 @@ export default function ProductFormScreen() {
       <TextInput
         placeholder="Código de barras (opcional)"
         style={styles.input}
-        value={barcode}
+        value={barcodeValue}
         onChangeText={setBarcode}
       />
 
@@ -164,12 +161,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     flexGrow: 1,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
+  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 10 },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',

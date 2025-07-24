@@ -1,11 +1,14 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Alert, Button, StyleSheet, Text, View } from 'react-native';
+import { getProductByBarcode } from '../lib/db';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const cameraRef = useRef<any>(null);
+  const router = useRouter();
 
   if (!permission) return <Text>Cargando permisos...</Text>;
 
@@ -18,9 +21,23 @@ export default function ScanScreen() {
     );
   }
 
-  const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
     setScanned(true);
-    Alert.alert('Código escaneado', `Tipo: ${type}\nDato: ${data}`);
+
+    try {
+      const product = await getProductByBarcode(data);
+
+      if (product) {
+        Alert.alert('Producto encontrado', `Redirigiendo a editar: ${product.name}`);
+        router.push(`/product-form?id=${product.id}`);
+      } else {
+        Alert.alert('Nuevo producto', 'Redirigiendo a agregar uno nuevo.');
+        router.push(`/product-form?barcode=${data}`);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo buscar el código en la base de datos.');
+      console.error(error);
+    }
   };
 
   return (
@@ -31,7 +48,7 @@ export default function ScanScreen() {
         facing="back"
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         barcodeScannerSettings={{
-          barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8'],
+          barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a'],
         }}
       />
       {scanned && (

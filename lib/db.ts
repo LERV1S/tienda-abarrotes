@@ -68,4 +68,12 @@ export const deleteProduct = async (id: number): Promise<void> => {
   await db.runAsync('DELETE FROM products WHERE id = ?', [id]);
 };
 
+export const getProductByBarcode = async (barcode: string): Promise<any | null> => {
+  const result = await db.getFirstAsync(
+    'SELECT * FROM products WHERE barcode = ?',
+    [barcode]
+  );
+  return result;
+};
+
 export default db;
