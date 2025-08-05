@@ -1,15 +1,18 @@
+import { CameraView } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Button,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { getProducts } from '../lib/db';
+import { getProductByBarcode, getProducts } from '../lib/db';
 
 type Product = {
   id: number;
@@ -23,10 +26,11 @@ type CartItem = Product & {
   quantity: number;
 };
 
-export default function SellScreen() {
+export default function PosScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchText, setSearchText] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -84,9 +88,32 @@ export default function SellScreen() {
     setSearchText('');
   };
 
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    setIsCameraOpen(false);
+
+    try {
+      const found = await getProductByBarcode(data);
+      if (found) {
+        addToCart(found);
+        Alert.alert('Producto agregado', found.name);
+      } else {
+        Alert.alert('No encontrado', '¿Deseas agregar este producto?', [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Agregar',
+            onPress: () => router.push(`/product-form?barcode=${data}`),
+          },
+        ]);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo buscar el producto.');
+      console.error(err);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🧾 Nueva Venta</Text>
+      <Text style={styles.title}>🧾 Punto de Venta</Text>
 
       <TextInput
         placeholder="Buscar producto..."
@@ -94,6 +121,10 @@ export default function SellScreen() {
         onChangeText={setSearchText}
         style={styles.searchInput}
       />
+
+      <Pressable style={styles.scanButton} onPress={() => setIsCameraOpen(true)}>
+        <Text style={styles.scanButtonText}>📷 Escanear producto</Text>
+      </Pressable>
 
       <FlatList
         data={filteredProducts}
@@ -143,6 +174,19 @@ export default function SellScreen() {
           <Text style={styles.finishButtonText}>💰 Finalizar Venta</Text>
         </Pressable>
       </View>
+
+      <Modal visible={isCameraOpen} animationType="slide">
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          onBarcodeScanned={handleBarcodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a'],
+          }}
+        />
+        <View style={styles.cameraOverlay}>
+          <Button title="Cerrar" onPress={() => setIsCameraOpen(false)} />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -157,6 +201,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
+  },
+  scanButton: {
+    backgroundColor: '#0077cc',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  scanButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   productItem: {
     padding: 12,
@@ -193,4 +248,11 @@ const styles = StyleSheet.create({
   },
   finishButtonText: { color: '#fff', fontSize: 16 },
   emptyCart: { color: '#777', fontStyle: 'italic' },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
 });
