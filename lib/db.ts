@@ -13,6 +13,26 @@ export const initDB = () => {
       barcode TEXT
     );
   `);
+
+  db.execAsync(`
+    CREATE TABLE IF NOT EXISTS sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      total REAL NOT NULL
+    );
+  `);
+
+  db.execAsync(`
+    CREATE TABLE IF NOT EXISTS sale_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      saleId INTEGER NOT NULL,
+      productId INTEGER NOT NULL,
+      quantity INTEGER NOT NULL,
+      price REAL NOT NULL,
+      FOREIGN KEY (saleId) REFERENCES sales(id),
+      FOREIGN KEY (productId) REFERENCES products(id)
+    );
+  `);
 };
 
 // Tipado compartido para producto
@@ -22,6 +42,11 @@ export type ProductInput = {
   salePrice: number;
   stock: number;
   barcode?: string | null;
+};
+
+export type CartItem = ProductInput & {
+  id: number;
+  quantity: number;
 };
 
 export const getProducts = async (): Promise<any[]> => {
@@ -34,6 +59,14 @@ export const getProductById = async (id: number): Promise<any> => {
   return result;
 };
 
+export const getProductByBarcode = async (barcode: string): Promise<any | null> => {
+  const result = await db.getFirstAsync(
+    'SELECT * FROM products WHERE barcode = ?',
+    [barcode]
+  );
+  return result;
+};
+
 export const insertProduct = async (product: ProductInput): Promise<void> => {
   await db.runAsync(
     'INSERT INTO products (name, purchasePrice, salePrice, stock, barcode) VALUES (?, ?, ?, ?, ?)',
@@ -42,7 +75,7 @@ export const insertProduct = async (product: ProductInput): Promise<void> => {
       product.purchasePrice,
       product.salePrice,
       product.stock,
-      product.barcode ?? null, // null explícito permitido
+      product.barcode ?? null,
     ]
   );
 };
@@ -68,12 +101,26 @@ export const deleteProduct = async (id: number): Promise<void> => {
   await db.runAsync('DELETE FROM products WHERE id = ?', [id]);
 };
 
-export const getProductByBarcode = async (barcode: string): Promise<any | null> => {
-  const result = await db.getFirstAsync(
-    'SELECT * FROM products WHERE barcode = ?',
-    [barcode]
+export const createSale = async (cart: CartItem[]): Promise<void> => {
+  const total = cart.reduce(
+    (sum, item) => sum + item.salePrice * item.quantity,
+    0
   );
-  return result;
-};
+  const date = new Date().toISOString();
 
-export default db;
+  // Insertar venta
+  const result = await db.runAsync(
+    'INSERT INTO sales (date, total) VALUES (?, ?)',
+    [date, total]
+  );
+
+  const saleId = result.lastInsertRowId;
+
+  // Insertar items vendidos
+  for (const item of cart) {
+    await db.runAsync(
+      'INSERT INTO sale_items (saleId, productId, quantity, price) VALUES (?, ?, ?, ?)',
+      [saleId, item.id, item.quantity, item.salePrice]
+    );
+  }
+};
