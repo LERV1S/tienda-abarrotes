@@ -124,3 +124,23 @@ export const createSale = async (cart: CartItem[]): Promise<void> => {
     );
   }
 };
+
+// Obtener lista de ventas (id, fecha y total)
+export const getSales = async (): Promise<{ id: number; date: string; total: number }[]> => {
+  return await db.getAllAsync('SELECT * FROM sales ORDER BY date DESC');
+};
+
+// Obtener detalles de una venta específica
+export const getSaleDetails = async (saleId: number): Promise<
+  { name: string; quantity: number; price: number }[]
+> => {
+  return await db.getAllAsync(
+    `
+    SELECT p.name, si.quantity, si.price
+    FROM sale_items si
+    JOIN products p ON p.id = si.productId
+    WHERE si.saleId = ?
+    `,
+    [saleId]
+  );
+};
