@@ -12,18 +12,20 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { getProductByBarcode, getProducts } from '../lib/db';
+import {
+  CartItem,
+  createSale,
+  getProductByBarcode,
+  getProducts,
+} from '../lib/db';
 
 type Product = {
   id: number;
   name: string;
   salePrice: number;
-  stock?: number;
-  barcode?: string;
-};
-
-type CartItem = Product & {
-  quantity: number;
+  purchasePrice: number;
+  stock: number;
+  barcode?: string | null;
 };
 
 export default function PosScreen() {
@@ -56,7 +58,14 @@ export default function PosScreen() {
         )
       );
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart([
+        ...cart,
+        {
+          ...product,
+          quantity: 1,
+          purchasePrice: product.purchasePrice ?? 0,
+        },
+      ]);
     }
   };
 
@@ -77,15 +86,21 @@ export default function PosScreen() {
     0
   );
 
-  const handleFinishSale = () => {
+  const handleFinishSale = async () => {
     if (cart.length === 0) {
       Alert.alert('Venta vacía', 'Agrega productos al carrito primero.');
       return;
     }
 
-    Alert.alert('Venta realizada', `Total: $${total.toFixed(2)}`);
-    setCart([]);
-    setSearchText('');
+    try {
+      await createSale(cart);
+      Alert.alert('Venta registrada', `Total: $${total.toFixed(2)}`);
+      setCart([]);
+      setSearchText('');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo guardar la venta.');
+      console.error(error);
+    }
   };
 
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
